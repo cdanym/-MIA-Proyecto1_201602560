@@ -253,22 +253,46 @@ func generarReporteDISK(mbr Mbr){
 	if mbr.Particion1.Nombre == nuevoNombre { //No tiene nombre
 		strReporte += "<td> LIBRE </td>"
 	}else{ //Si tiene nombre
-		strReporte += "<td> " + ConvertirString(mbr.Particion1.Nombre[0:]) + " </td>"
+		var tipo string
+		if mbr.Particion1.Tipo == 'e'{
+			tipo = "e"
+		}else if mbr.Particion1.Tipo == 'p'{
+			tipo = "p"
+		}
+		strReporte += "<td> " + ConvertirString(mbr.Particion1.Nombre[0:]) + ", " + tipo + " </td>"
 	}
 	if mbr.Particion2.Nombre == nuevoNombre {
 		strReporte += "<td> LIBRE </td>"
 	}else{
-		strReporte += "<td> " + ConvertirString(mbr.Particion2.Nombre[0:]) + " </td>"
+		var tipo string
+		if mbr.Particion2.Tipo == 'e'{
+			tipo = "e"
+		}else if mbr.Particion2.Tipo == 'p'{
+			tipo = "p"
+		}
+		strReporte += "<td> " + ConvertirString(mbr.Particion2.Nombre[0:]) + ", " + tipo + " </td>"
 	}
 	if mbr.Particion3.Nombre == nuevoNombre {
 		strReporte += "<td> LIBRE </td>"
 	}else{
-		strReporte += "<td> " + ConvertirString(mbr.Particion3.Nombre[0:]) + " </td>"
+		var tipo string
+		if mbr.Particion3.Tipo == 'e'{
+			tipo = "e"
+		}else if mbr.Particion3.Tipo == 'p'{
+			tipo = "p"
+		}
+		strReporte += "<td> " + ConvertirString(mbr.Particion3.Nombre[0:]) + ", " + tipo + " </td>"
 	}
 	if mbr.Particion4.Nombre == nuevoNombre {
 		strReporte += "<td> LIBRE </td>"
 	}else{
-		strReporte += "<td> " + ConvertirString(mbr.Particion4.Nombre[0:]) + " </td>"
+		var tipo string
+		if mbr.Particion4.Tipo == 'e'{
+			tipo = "e"
+		}else if mbr.Particion4.Tipo == 'p'{
+			tipo = "p"
+		}
+		strReporte += "<td> " + ConvertirString(mbr.Particion4.Nombre[0:]) + ", " + tipo + " </td>"
 	}
 	strReporte += "</tr></table> >]; }"
 	
@@ -645,121 +669,221 @@ func ejecutarComando(lineaComando string) {
 
 func crearParticion(nombre string, ruta string, tamanio string, tipo string, unidad string, ajuste string){
 	fmt.Println()
-	if nombre == "" || ruta == "" || tamanio == "" {
-		fmt.Println("Faltan datos, no se creo la particion")
+	if tipo == "l"{
+		fmt.Println("Particion logica...")
 	}else{
-		particionNueva := Particion{Estado:1}
-
-		//Asignando tipo al struct
-		//Validar que solo haya una particion extendida en un disco
-		if tipo == "p" { //Primaria
-			particionNueva.Tipo = 'p'
-		}else if tipo == "e" { //Extendida
-			//SOLO PUEDE HABER 1 EXTENDIDA
-			particionNueva.Tipo = 'e'
+		if nombre == "" || ruta == "" || tamanio == "" {
+			fmt.Println("Faltan datos, no se creo la particion")
 		}else{
-			//VALIDAR QUE NO ESTEN YA LAS 4 PARTICIONES POR DISCO
-			particionNueva.Tipo = 'p'
-		}
-
-		//Asignando ajuste al struct
-		if ajuste == "bf" {
-			particionNueva.Ajuste = 'b'
-		}else if ajuste == "ff" {
-			particionNueva.Ajuste = 'f'
-		}else if ajuste == "wf"{
-			particionNueva.Ajuste = 'w'
-		}else if ajuste == ""{
-			particionNueva.Ajuste = 'w'
-		}
-
-		//Asignando tamaño al struct
-		tamConv,_ := strconv.Atoi(tamanio)
-		if unidad == "b" {
-
-		}else if unidad == "k" {
-			tamConv = (tamConv * 1024)
-		}else if unidad == "m" {
-			tamConv = (tamConv *1024 *1024)
-		}else if unidad == "" {
-			tamConv = (tamConv *1024)
-		}else{
-			fmt.Println("Unidad incorrecta")
-		}
-		particionNueva.Tamanio = int64(tamConv)
-
-		//Asignando nombre al struct
-		if nombre == "" {
-			fmt.Println("Nombre incorrecto")
-		}else{
-			copy(particionNueva.Nombre[0:],nombre)
-		}
-		fmt.Println("Particion a crear ",particionNueva)
-
-		//Asignando inicio al struct
-		//Si el disco esta vacio se coloca en despues del mbr
-		fmt.Println("...")
-		mbrTemp := leerArchivoBinario(ruta)
-		tamanioMBR := binary.Size(mbrTemp)
-		fmt.Println("Tamaño del mbr leido: ", tamanioMBR)
-		//IMPRIMIR LOS DATOS LEIDOS PARA COMPROBAR QUE SE LEYO CORRECTAMENTE
-		fmt.Println("Imprimiendo mbr leido: ", mbrTemp)
-
-		//1. Validar que solo haya una particion extendida en un disco
-		//2. SI EL DISCO ESTA VACIO, SE INSERTA DESPUES DEL MBR
-		//3. Si el disco tiene particiones, se coloca despues de la ulitma particion (sin pasar de 4 particiones)
-		if (particionNueva.Tipo=='e') && (mbrTemp.Particion1.Tipo=='e' || mbrTemp.Particion2.Tipo=='e' || mbrTemp.Particion3.Tipo=='e' || mbrTemp.Particion4.Tipo=='e') {
-			fmt.Println("Ya existe una particion extendida en el disco")
-		}else{
-			//NO DEBE REPETIRSE EL NOMBRE DE LAS PARTICIONES
-			if(mbrTemp.Particion1.Nombre==particionNueva.Nombre || mbrTemp.Particion2.Nombre==particionNueva.Nombre || mbrTemp.Particion3.Nombre==particionNueva.Nombre || mbrTemp.Particion4.Nombre==particionNueva.Nombre){
-				fmt.Printf("Ya existe una particion con este nombre: %s\n", particionNueva.Nombre)
+			particionNueva := Particion{Estado:1}
+	
+			//Asignando tipo al struct
+			//Validar que solo haya una particion extendida en un disco
+			if tipo == "p" { //Primaria
+				particionNueva.Tipo = 'p'
+			}else if tipo == "e" { //Extendida
+				//SOLO PUEDE HABER 1 EXTENDIDA
+				particionNueva.Tipo = 'e'
 			}else{
-				//DEBE HABER ESPACIO DISPONIBLE EN EL DISCO
-				// tam total del disco - tamMBR -tamP1 - tamP2 -tamP3 - tamP4 = espacio libre //bytes
-				// espacio libre >= tam particion nueva //bytes
-				//espacioLibre := mbrTemp.Tamanio - int64(binary.Size(mbrTemp) - mbrTemp.Particion1.Tamanio - mbrTemp.Particion2.Tamanio - mbrTemp.Particion3.Tamanio - mbrTemp.Particion4.Tamanio
-				
-				if(mbrTemp.Particion1.Estado == 0){ //La particion 1 esta vacia
-					//Pero hay que preguntar si hay particiones llenas a la par ->, quiere decir que se elimino la particion 1 anteriormente
-					if mbrTemp.Particion2.Estado != 0 || mbrTemp.Particion3.Estado != 0 || mbrTemp.Particion4.Estado != 0{
-						//Obtener 
-						inicioEspacioLibre := tamanioMBR+1
-						var finEspacioLibre int64
-						if mbrTemp.Particion2.Estado != 0 {
-							//Espacio libre en particion 1
-							finEspacioLibre = mbrTemp.Particion2.Inicio-1
-							inicioParticion := inicioEspacioLibre
-							tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
-							//Preguntar si la nueva particion cabe en ese espacio libre
-							if tamLibre >= particionNueva.Tamanio {
-								//Se inserta la particion
-								particionNueva.Inicio = int64(inicioParticion)
-								mbrTemp.Particion1 = particionNueva
-								escribirArchivoBinario(mbrTemp,ruta)
-								//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
-
-							}else{
-								fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
+				//VALIDAR QUE NO ESTEN YA LAS 4 PARTICIONES POR DISCO
+				particionNueva.Tipo = 'p'
+			}
+	
+			//Asignando ajuste al struct
+			if ajuste == "bf" {
+				particionNueva.Ajuste = 'b'
+			}else if ajuste == "ff" {
+				particionNueva.Ajuste = 'f'
+			}else if ajuste == "wf"{
+				particionNueva.Ajuste = 'w'
+			}else if ajuste == ""{
+				particionNueva.Ajuste = 'w'
+			}
+	
+			//Asignando tamaño al struct
+			tamConv,_ := strconv.Atoi(tamanio)
+			if unidad == "b" {
+	
+			}else if unidad == "k" {
+				tamConv = (tamConv * 1024)
+			}else if unidad == "m" {
+				tamConv = (tamConv *1024 *1024)
+			}else if unidad == "" {
+				tamConv = (tamConv *1024)
+			}else{
+				fmt.Println("Unidad incorrecta")
+			}
+			particionNueva.Tamanio = int64(tamConv)
+	
+			//Asignando nombre al struct
+			if nombre == "" {
+				fmt.Println("Nombre incorrecto")
+			}else{
+				copy(particionNueva.Nombre[0:],nombre)
+			}
+			fmt.Println("Particion a crear ",particionNueva)
+	
+			//Asignando inicio al struct
+			//Si el disco esta vacio se coloca en despues del mbr
+			fmt.Println("...")
+			mbrTemp := leerArchivoBinario(ruta)
+			tamanioMBR := binary.Size(mbrTemp)
+			fmt.Println("Tamaño del mbr leido: ", tamanioMBR)
+			//IMPRIMIR LOS DATOS LEIDOS PARA COMPROBAR QUE SE LEYO CORRECTAMENTE
+			fmt.Println("Imprimiendo mbr leido: ", mbrTemp)
+	
+			//1. Validar que solo haya una particion extendida en un disco
+			//2. SI EL DISCO ESTA VACIO, SE INSERTA DESPUES DEL MBR
+			//3. Si el disco tiene particiones, se coloca despues de la ulitma particion (sin pasar de 4 particiones)
+			if (particionNueva.Tipo=='e') && (mbrTemp.Particion1.Tipo=='e' || mbrTemp.Particion2.Tipo=='e' || mbrTemp.Particion3.Tipo=='e' || mbrTemp.Particion4.Tipo=='e') {
+				fmt.Println("Ya existe una particion extendida en el disco")
+			}else{
+				//NO DEBE REPETIRSE EL NOMBRE DE LAS PARTICIONES
+				if(mbrTemp.Particion1.Nombre==particionNueva.Nombre || mbrTemp.Particion2.Nombre==particionNueva.Nombre || mbrTemp.Particion3.Nombre==particionNueva.Nombre || mbrTemp.Particion4.Nombre==particionNueva.Nombre){
+					fmt.Printf("Ya existe una particion con este nombre: %s\n", particionNueva.Nombre)
+				}else{
+					//DEBE HABER ESPACIO DISPONIBLE EN EL DISCO
+					// tam total del disco - tamMBR -tamP1 - tamP2 -tamP3 - tamP4 = espacio libre //bytes
+					// espacio libre >= tam particion nueva //bytes
+					//espacioLibre := mbrTemp.Tamanio - int64(binary.Size(mbrTemp) - mbrTemp.Particion1.Tamanio - mbrTemp.Particion2.Tamanio - mbrTemp.Particion3.Tamanio - mbrTemp.Particion4.Tamanio
+					
+					if(mbrTemp.Particion1.Estado == 0){ //La particion 1 esta vacia
+						//Pero hay que preguntar si hay particiones llenas a la par ->, quiere decir que se elimino la particion 1 anteriormente
+						if mbrTemp.Particion2.Estado != 0 || mbrTemp.Particion3.Estado != 0 || mbrTemp.Particion4.Estado != 0{
+							//Obtener 
+							inicioEspacioLibre := tamanioMBR+1
+							var finEspacioLibre int64
+							if mbrTemp.Particion2.Estado != 0 {
+								//Espacio libre en particion 1
+								finEspacioLibre = mbrTemp.Particion2.Inicio-1
+								inicioParticion := inicioEspacioLibre
+								tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
+								//Preguntar si la nueva particion cabe en ese espacio libre
+								if tamLibre >= particionNueva.Tamanio {
+									//Se inserta la particion
+									particionNueva.Inicio = int64(inicioParticion)
+									mbrTemp.Particion1 = particionNueva
+									escribirArchivoBinario(mbrTemp,ruta)
+									//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
+	
+								}else{
+									fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
+								}
+							}else if mbrTemp.Particion2.Estado == 0 && mbrTemp.Particion3.Estado != 0 {
+								//Espacio libre en particion 1 y 2
+								finEspacioLibre = mbrTemp.Particion3.Inicio-1
+								inicioParticion := inicioEspacioLibre
+								tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
+								//Preguntar si la nueva particion cabe en ese espacio libre
+								if tamLibre >= particionNueva.Tamanio {
+									//Se inserta la particion
+									particionNueva.Inicio = int64(inicioParticion)
+									mbrTemp.Particion1 = particionNueva
+									escribirArchivoBinario(mbrTemp,ruta)
+									//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
+	
+								}else{
+									fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
+								}
+							}else if mbrTemp.Particion2.Estado == 0 && mbrTemp.Particion3.Estado == 0 && mbrTemp.Particion4.Estado != 0 {
+								//Espacio libre en particion 1, 2 y 3
+								finEspacioLibre = mbrTemp.Particion4.Inicio-1
+								inicioParticion := inicioEspacioLibre
+								tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
+								//Preguntar si la nueva particion cabe en ese espacio libre
+								if tamLibre >= particionNueva.Tamanio {
+									//Se inserta la particion
+									particionNueva.Inicio = int64(inicioParticion)
+									mbrTemp.Particion1 = particionNueva
+									escribirArchivoBinario(mbrTemp,ruta)
+									//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
+	
+								}else{
+									fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
+								}
 							}
-						}else if mbrTemp.Particion2.Estado == 0 && mbrTemp.Particion3.Estado != 0 {
-							//Espacio libre en particion 1 y 2
-							finEspacioLibre = mbrTemp.Particion3.Inicio-1
-							inicioParticion := inicioEspacioLibre
-							tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
-							//Preguntar si la nueva particion cabe en ese espacio libre
-							if tamLibre >= particionNueva.Tamanio {
-								//Se inserta la particion
-								particionNueva.Inicio = int64(inicioParticion)
-								mbrTemp.Particion1 = particionNueva
-								escribirArchivoBinario(mbrTemp,ruta)
-								//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
-
+						}else{
+							//EL DISCO ESTA VACIO, SE PUEDE INSERTAR EN PARTICION 1
+							//VALIDAR QUE EL TAMAÑO DE LA PARTICION A CREAR NO SEA MAYOR AL ESPACIO RESTANTE DEL DISCO
+							tamanioDisco := mbrTemp.Tamanio - int64(tamanioMBR)
+							if tamanioDisco < particionNueva.Tamanio {
+								fmt.Println("La particion no cabe en el disco")
 							}else{
-								fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
+								inicioParticion := tamanioMBR+1
+								particionNueva.Inicio = int64(inicioParticion)
+								fmt.Println("La particion 1 esta vacia, inicia en: ", inicioParticion)
+								//Coloco la nueva particion en la particion 1
+								mbrTemp.Particion1 = particionNueva
+								//Actualizo el mbr
+								fmt.Println("Nuevo mbr con informacion actualizada: ", mbrTemp)
+								//fmt.Println("Particion a guardar: ", mbrTemp.Particion1)
+								escribirArchivoBinario(mbrTemp, ruta)
 							}
-						}else if mbrTemp.Particion2.Estado == 0 && mbrTemp.Particion3.Estado == 0 && mbrTemp.Particion4.Estado != 0 {
-							//Espacio libre en particion 1, 2 y 3
+						}
+					}else if(mbrTemp.Particion2.Estado == 0){ //La particion 2 esta vacia y la 1 ocupada
+						//Pero hay que preguntar si hay particiones llenas a la par ->, quiere decir que se elimino la particion 2 anteriormente
+						if mbrTemp.Particion3.Estado != 0 || mbrTemp.Particion4.Estado != 0{
+							//Obtener 
+							inicioEspacioLibre := int64(tamanioMBR+1) + mbrTemp.Particion1.Tamanio
+							var finEspacioLibre int64
+							if mbrTemp.Particion3.Estado != 0 {
+								//Espacio libre solamente en particion 2
+								finEspacioLibre = mbrTemp.Particion3.Inicio-1
+								inicioParticion := inicioEspacioLibre
+								tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
+								//Preguntar si la nueva particion cabe en ese espacio libre
+								if tamLibre >= particionNueva.Tamanio {
+									//Se inserta la particion
+									particionNueva.Inicio = int64(inicioParticion)
+									mbrTemp.Particion2 = particionNueva
+									escribirArchivoBinario(mbrTemp,ruta)
+									//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
+	
+								}else{
+									fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
+								}
+							}else if mbrTemp.Particion3.Estado == 0 && mbrTemp.Particion4.Estado != 0 {
+								//Espacio libre en particion 2 y 3
+								finEspacioLibre = mbrTemp.Particion4.Inicio-1
+								inicioParticion := inicioEspacioLibre
+								tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
+								//Preguntar si la nueva particion cabe en ese espacio libre
+								if tamLibre >= particionNueva.Tamanio {
+									//Se inserta la particion
+									particionNueva.Inicio = int64(inicioParticion)
+									mbrTemp.Particion2 = particionNueva
+									escribirArchivoBinario(mbrTemp,ruta)
+									//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
+	
+								}else{
+									fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
+								}
+							}
+						}else{
+							//SE PUEDE INSERTAR EN PARTICION 2
+							//VALIDAR QUE EL TAMAÑO DE LA PARTICION A CREAR NO SEA MAYOR AL ESPACIO RESTANTE DEL DISCO
+							tamanioDisco := mbrTemp.Tamanio - int64(tamanioMBR) - mbrTemp.Particion1.Tamanio
+							if tamanioDisco < particionNueva.Tamanio {
+								fmt.Println("La particion no cabe en el disco")
+							}else{
+								inicioParticion := tamanioMBR+1 + int(mbrTemp.Particion1.Tamanio)
+								particionNueva.Inicio = int64(inicioParticion)
+								fmt.Println("La particion 2 esta vacia, inicia en: ", inicioParticion)
+								//Coloco la nueva particion en la particion 1
+								mbrTemp.Particion2 = particionNueva
+								//Actualizo el mbr
+								fmt.Println("Nuevo mbr con informacion actualizada: ", mbrTemp)
+								//fmt.Println("Particion a guardar: ", mbrTemp.Particion2)
+								escribirArchivoBinario(mbrTemp, ruta)
+							}
+						}
+					}else if(mbrTemp.Particion3.Inicio == 0){ //La particion 3 esta vacia, la 1 y 2 ocupada
+						//Pero hay que preguntar si hay particiones llenas a la par ->, quiere decir que se elimino la particion 2 anteriormente
+						if mbrTemp.Particion4.Estado != 0{
+							//Obtener 
+							inicioEspacioLibre := int64(tamanioMBR+1) + mbrTemp.Particion1.Tamanio + mbrTemp.Particion2.Tamanio
+							var finEspacioLibre int64
+							//Espacio libre solamente en particion 3
 							finEspacioLibre = mbrTemp.Particion4.Inicio-1
 							inicioParticion := inicioEspacioLibre
 							tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
@@ -767,148 +891,53 @@ func crearParticion(nombre string, ruta string, tamanio string, tipo string, uni
 							if tamLibre >= particionNueva.Tamanio {
 								//Se inserta la particion
 								particionNueva.Inicio = int64(inicioParticion)
-								mbrTemp.Particion1 = particionNueva
+								mbrTemp.Particion3 = particionNueva
 								escribirArchivoBinario(mbrTemp,ruta)
 								//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
-
+	
 							}else{
 								fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
 							}
-						}
-					}else{
-						//EL DISCO ESTA VACIO, SE PUEDE INSERTAR EN PARTICION 1
-						//VALIDAR QUE EL TAMAÑO DE LA PARTICION A CREAR NO SEA MAYOR AL ESPACIO RESTANTE DEL DISCO
-						tamanioDisco := mbrTemp.Tamanio - int64(tamanioMBR)
-						if tamanioDisco < particionNueva.Tamanio {
-							fmt.Println("La particion no cabe en el disco")
 						}else{
-							inicioParticion := tamanioMBR+1
-							particionNueva.Inicio = int64(inicioParticion)
-							fmt.Println("La particion 1 esta vacia, inicia en: ", inicioParticion)
-							//Coloco la nueva particion en la particion 1
-							mbrTemp.Particion1 = particionNueva
-							//Actualizo el mbr
-							fmt.Println("Nuevo mbr con informacion actualizada: ", mbrTemp)
-							//fmt.Println("Particion a guardar: ", mbrTemp.Particion1)
-							escribirArchivoBinario(mbrTemp, ruta)
-						}
-					}
-				}else if(mbrTemp.Particion2.Estado == 0){ //La particion 2 esta vacia y la 1 ocupada
-					//Pero hay que preguntar si hay particiones llenas a la par ->, quiere decir que se elimino la particion 2 anteriormente
-					if mbrTemp.Particion3.Estado != 0 || mbrTemp.Particion4.Estado != 0{
-						//Obtener 
-						inicioEspacioLibre := int64(tamanioMBR+1) + mbrTemp.Particion1.Tamanio
-						var finEspacioLibre int64
-						if mbrTemp.Particion3.Estado != 0 {
-							//Espacio libre solamente en particion 2
-							finEspacioLibre = mbrTemp.Particion3.Inicio-1
-							inicioParticion := inicioEspacioLibre
-							tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
-							//Preguntar si la nueva particion cabe en ese espacio libre
-							if tamLibre >= particionNueva.Tamanio {
-								//Se inserta la particion
+							//SE PUEDE INSERTAR EN PARTICION 3
+							//VALIDAR QUE EL TAMAÑO DE LA PARTICION A CREAR NO SEA MAYOR AL ESPACIO RESTANTE DEL DISCO
+							tamanioDisco := mbrTemp.Tamanio - int64(tamanioMBR) - mbrTemp.Particion1.Tamanio - mbrTemp.Particion2.Tamanio
+							if tamanioDisco < particionNueva.Tamanio {
+								fmt.Println("La particion no cabe en el disco")
+							}else{
+								inicioParticion := tamanioMBR+1 + int(mbrTemp.Particion1.Tamanio) + int(mbrTemp.Particion2.Tamanio)
 								particionNueva.Inicio = int64(inicioParticion)
-								mbrTemp.Particion2 = particionNueva
-								escribirArchivoBinario(mbrTemp,ruta)
-								//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
-
-							}else{
-								fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
-							}
-						}else if mbrTemp.Particion3.Estado == 0 && mbrTemp.Particion4.Estado != 0 {
-							//Espacio libre en particion 2 y 3
-							finEspacioLibre = mbrTemp.Particion4.Inicio-1
-							inicioParticion := inicioEspacioLibre
-							tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
-							//Preguntar si la nueva particion cabe en ese espacio libre
-							if tamLibre >= particionNueva.Tamanio {
-								//Se inserta la particion
-								particionNueva.Inicio = int64(inicioParticion)
-								mbrTemp.Particion2 = particionNueva
-								escribirArchivoBinario(mbrTemp,ruta)
-								//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
-
-							}else{
-								fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
+								fmt.Println("La particion 3 esta vacia, inicia en: ", inicioParticion)
+								mbrTemp.Particion3 = particionNueva
+								fmt.Println("Nuevo mbr con informacion actualizada: ", mbrTemp)
+								//fmt.Println("Particion a guardar: ", mbrTemp.Particion3)
+								escribirArchivoBinario(mbrTemp, ruta)
 							}
 						}
-					}else{
-						//SE PUEDE INSERTAR EN PARTICION 2
+					}else if(mbrTemp.Particion4.Inicio == 0){ //La particion 4 es la unica disponible
+						//SE PUEDE INSERTAR EN PARTICION 4
 						//VALIDAR QUE EL TAMAÑO DE LA PARTICION A CREAR NO SEA MAYOR AL ESPACIO RESTANTE DEL DISCO
-						tamanioDisco := mbrTemp.Tamanio - int64(tamanioMBR) - mbrTemp.Particion1.Tamanio
+						tamanioDisco := mbrTemp.Tamanio - int64(tamanioMBR) - mbrTemp.Particion1.Tamanio - mbrTemp.Particion2.Tamanio - mbrTemp.Particion3.Tamanio
 						if tamanioDisco < particionNueva.Tamanio {
 							fmt.Println("La particion no cabe en el disco")
 						}else{
-							inicioParticion := tamanioMBR+1 + int(mbrTemp.Particion1.Tamanio)
+							inicioParticion := tamanioMBR+1 + int(mbrTemp.Particion1.Tamanio) + int(mbrTemp.Particion2.Tamanio) + int(mbrTemp.Particion3.Tamanio)
 							particionNueva.Inicio = int64(inicioParticion)
-							fmt.Println("La particion 2 esta vacia, inicia en: ", inicioParticion)
-							//Coloco la nueva particion en la particion 1
-							mbrTemp.Particion2 = particionNueva
-							//Actualizo el mbr
-							fmt.Println("Nuevo mbr con informacion actualizada: ", mbrTemp)
-							//fmt.Println("Particion a guardar: ", mbrTemp.Particion2)
-							escribirArchivoBinario(mbrTemp, ruta)
-						}
-					}
-				}else if(mbrTemp.Particion3.Inicio == 0){ //La particion 3 esta vacia, la 1 y 2 ocupada
-					//Pero hay que preguntar si hay particiones llenas a la par ->, quiere decir que se elimino la particion 2 anteriormente
-					if mbrTemp.Particion4.Estado != 0{
-						//Obtener 
-						inicioEspacioLibre := int64(tamanioMBR+1) + mbrTemp.Particion1.Tamanio + mbrTemp.Particion2.Tamanio
-						var finEspacioLibre int64
-						//Espacio libre solamente en particion 3
-						finEspacioLibre = mbrTemp.Particion4.Inicio-1
-						inicioParticion := inicioEspacioLibre
-						tamLibre := (finEspacioLibre-int64(inicioEspacioLibre))
-						//Preguntar si la nueva particion cabe en ese espacio libre
-						if tamLibre >= particionNueva.Tamanio {
-							//Se inserta la particion
-							particionNueva.Inicio = int64(inicioParticion)
-							mbrTemp.Particion3 = particionNueva
-							escribirArchivoBinario(mbrTemp,ruta)
-							//EL ESPACIO QUE SOBRA SE CONVIERTE EN FRAGMENTACION
-
-						}else{
-							fmt.Println("El tamaño de la particion a crear es mayor al espacio libre") //3)
-						}
-					}else{
-						//SE PUEDE INSERTAR EN PARTICION 3
-						//VALIDAR QUE EL TAMAÑO DE LA PARTICION A CREAR NO SEA MAYOR AL ESPACIO RESTANTE DEL DISCO
-						tamanioDisco := mbrTemp.Tamanio - int64(tamanioMBR) - mbrTemp.Particion1.Tamanio - mbrTemp.Particion2.Tamanio
-						if tamanioDisco < particionNueva.Tamanio {
-							fmt.Println("La particion no cabe en el disco")
-						}else{
-							inicioParticion := tamanioMBR+1 + int(mbrTemp.Particion1.Tamanio) + int(mbrTemp.Particion2.Tamanio)
-							particionNueva.Inicio = int64(inicioParticion)
-							fmt.Println("La particion 3 esta vacia, inicia en: ", inicioParticion)
-							mbrTemp.Particion3 = particionNueva
+							fmt.Println("La particion 4 esta vacia, inicia en: ", inicioParticion)
+							mbrTemp.Particion4 = particionNueva
 							fmt.Println("Nuevo mbr con informacion actualizada: ", mbrTemp)
 							//fmt.Println("Particion a guardar: ", mbrTemp.Particion3)
 							escribirArchivoBinario(mbrTemp, ruta)
 						}
-					}
-				}else if(mbrTemp.Particion4.Inicio == 0){ //La particion 4 es la unica disponible
-					//SE PUEDE INSERTAR EN PARTICION 4
-					//VALIDAR QUE EL TAMAÑO DE LA PARTICION A CREAR NO SEA MAYOR AL ESPACIO RESTANTE DEL DISCO
-					tamanioDisco := mbrTemp.Tamanio - int64(tamanioMBR) - mbrTemp.Particion1.Tamanio - mbrTemp.Particion2.Tamanio - mbrTemp.Particion3.Tamanio
-					if tamanioDisco < particionNueva.Tamanio {
-						fmt.Println("La particion no cabe en el disco")
 					}else{
-						inicioParticion := tamanioMBR+1 + int(mbrTemp.Particion1.Tamanio) + int(mbrTemp.Particion2.Tamanio) + int(mbrTemp.Particion3.Tamanio)
-						particionNueva.Inicio = int64(inicioParticion)
-						fmt.Println("La particion 4 esta vacia, inicia en: ", inicioParticion)
-						mbrTemp.Particion4 = particionNueva
-						fmt.Println("Nuevo mbr con informacion actualizada: ", mbrTemp)
-						//fmt.Println("Particion a guardar: ", mbrTemp.Particion3)
-						escribirArchivoBinario(mbrTemp, ruta)
+						fmt.Println("Disco lleno")
 					}
-				}else{
-					fmt.Println("Disco lleno")
 				}
+				
 			}
-			
 		}
-	}	
+	}
+		
 }
 
 func eliminarParticion(eliminar string,ruta string,nombre string){
